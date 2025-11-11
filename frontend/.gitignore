@@ -1,0 +1,60 @@
+# Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+package-lock.json
+yarn.lock
+
+# Expo
+.expo/
+.expo-shared/
+.expo-dev/
+web-build/
+dist/
+.expo-packager-cache/
+.expo-cache/
+
+# React Native
+android/
+ios/
+*.keystore
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+
+# Metro bundler
+*.metro-cache/
+metro-cache/
+.cache/
+*.bundle
+
+# Build
+build/
+*.apk
+*.aab
+*.app
+
+# macOS
+.DS_Store
+
+# Windows
+Thumbs.db
+
+# VSCode / JetBrains IDEs
+.vscode/
+.idea/
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Logs
+*.log
+
+# Misc
+coverage/
+*.orig
