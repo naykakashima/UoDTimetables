@@ -1,4 +1,4 @@
-package com.naykakashima.backend.infrastructure;
+package com.naykakashima.backend.infrastructure.repository;
 
 import com.naykakashima.backend.domain.User;
 import org.springframework.data.jpa.repository.JpaRepository;

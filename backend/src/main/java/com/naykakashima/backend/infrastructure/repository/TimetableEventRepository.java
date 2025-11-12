@@ -1,4 +1,4 @@
-package com.naykakashima.backend.infrastructure;
+package com.naykakashima.backend.infrastructure.repository;
 
 import com.naykakashima.backend.domain.TimetableEvent;
 import org.springframework.data.jpa.repository.JpaRepository;
