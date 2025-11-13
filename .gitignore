@@ -104,3 +104,5 @@ build/
 ### VS Code ###
 .vscode/
 
+### SpringBoot application.yml files ###
+backend/src/main/resources/application.yml
