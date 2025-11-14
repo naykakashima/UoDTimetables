@@ -1,16 +1,18 @@
 package com.naykakashima.backend.presentation;
 
 import com.naykakashima.backend.application.TimetableEventService;
+import com.naykakashima.backend.application.TimetableScraperService;
 import com.naykakashima.backend.domain.TimetableEvent;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/api/events")
+@RequestMapping("/api/timetable")
 public class TimetableEventController {
     private final TimetableEventService eventService;
 
@@ -25,4 +27,12 @@ public class TimetableEventController {
         List<TimetableEvent> events = eventService.getEventByUserId(userId);
         return ResponseEntity.ok(events);
     }
+
+    @PostMapping("/import")
+    public ResponseEntity<List<TimetableEvent>> importTimetable(@RequestBody Map<String, String> payload){
+        String studentId = payload.get("studentId");
+        List<TimetableEvent> events = eventService.importForStudents(studentId);
+        return ResponseEntity.ok(events);
+    }
+
 }

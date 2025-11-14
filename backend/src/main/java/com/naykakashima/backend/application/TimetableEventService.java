@@ -7,4 +7,5 @@ import java.util.List;
 public interface TimetableEventService {
     TimetableEvent createEvent(TimetableEvent event);
     List<TimetableEvent> getEventByUserId(String userId);
+    List<TimetableEvent> importForStudents(String studentId);
 }
