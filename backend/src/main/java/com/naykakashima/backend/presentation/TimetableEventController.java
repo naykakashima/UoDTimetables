@@ -14,7 +14,7 @@ import java.util.List;
 public class TimetableEventController {
     private final TimetableEventService eventService;
 
-    @PostMapping
+    @PostMapping("/createEvent")
     public ResponseEntity<TimetableEvent> createEvent(@RequestBody TimetableEvent timetableEvent){
         TimetableEvent savedEvent = eventService.createEvent(timetableEvent);
         return ResponseEntity.ok(savedEvent);
