@@ -21,4 +21,9 @@ public class TimetableEvent {
     private LocalDateTime endTime;
     private String location;
     private String description;
+
+    // Optional but recommended for ICS & grouping
+    private String uid;
+    private Integer weekNumber;
+    private String moduleCode;
 }
