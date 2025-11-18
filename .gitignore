@@ -110,3 +110,4 @@ backend/src/main/resources/application.yml
 ### Firebase files ###
 frontend/GoogleService-Info.plist
 frontend/google-services.json
+frontend/config/FirebaseConfig.ts
