@@ -1,10 +1,9 @@
-import { StyleSheet, TouchableOpacity } from 'react-native';
-import { SafeAreaView, Text } from 'react-native';
+import { SafeAreaView, StyleSheet, Text } from 'react-native';
 
-export default function TabOneScreen() {
-  return (    
+export default function TabTwoScreen() {
+  return (
     <SafeAreaView style={styles.container}>
-      <Text style={styles.title}>home</Text>
+      <Text style={styles.title}>map</Text>
     </SafeAreaView>
   );
 }

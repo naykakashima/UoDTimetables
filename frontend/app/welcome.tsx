@@ -6,7 +6,7 @@ import { auth } from "@/config/FirebaseConfig";
 import { createUserWithEmailAndPassword } from "firebase/auth";
 import { router } from "expo-router";
 
-const login = () => {
+const welcome = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
@@ -37,7 +37,7 @@ const login = () => {
         style={styles.logo}
         resizeMode="contain"
       />
-      <Text style={styles.title}>Login</Text>
+      <Text style={styles.title}>Welcome</Text>
       <TextInput
         placeholder="Email"
         value={email}
@@ -119,4 +119,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default login;
+export default welcome;
