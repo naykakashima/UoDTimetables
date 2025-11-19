@@ -1,5 +1,8 @@
 package com.naykakashima.backend.application.implementations;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.naykakashima.backend.application.TimetableScraperService;
 import com.naykakashima.backend.domain.TimetableEvent;
 import lombok.RequiredArgsConstructor;
@@ -7,8 +10,10 @@ import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
+import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Service;
 
+import java.io.InputStream;
 import java.time.*;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.IsoFields;
@@ -95,6 +100,22 @@ public class TimetableScraperServiceImpl implements TimetableScraperService {
         }
 
         return events;
+    }
+
+    // Mock loader
+    @Override
+    public List<TimetableEvent> loadMockTimetable() {
+        try {
+            ObjectMapper mapper = new ObjectMapper();
+            // Register JavaTimeModule to handle LocalDateTime / LocalTime
+            mapper.registerModule(new JavaTimeModule());
+
+            InputStream is = new ClassPathResource("mock-timetable.json").getInputStream();
+            return mapper.readValue(is, new TypeReference<List<TimetableEvent>>() {});
+        } catch (Exception e) {
+            e.printStackTrace();
+            return List.of();
+        }
     }
 
     // --- Helpers ---

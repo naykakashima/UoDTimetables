@@ -6,4 +6,5 @@ import java.util.List;
 
 public interface TimetableScraperService {
     List<TimetableEvent> scrape(String url);
+    List<TimetableEvent> loadMockTimetable();
 }

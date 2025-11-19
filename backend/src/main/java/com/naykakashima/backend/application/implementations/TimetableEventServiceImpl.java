@@ -26,10 +26,19 @@ public class TimetableEventServiceImpl implements TimetableEventService {
     }
 
     @Override
-    public List<TimetableEvent> importForStudents(String studentId){
-        String url = buildUrl(studentId);
-        return scraper.scrape(url);
+    public List<TimetableEvent> importForStudents(String studentId) {
+
+        return scraper.loadMockTimetable();
+
+//        try {
+//            return scraper.scrape(buildUrl(studentId));
+//        } catch (Exception e) {
+//            System.out.println("Scraper failed, using backup timetable.");
+//            return scraper.mockEvents();
+//        }
     }
+
+
 
     private String buildUrl(String studentId) {
         String url = "https://timetable.dundee.ac.uk:8086/reporting/textspreadsheet"
