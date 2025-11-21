@@ -4,9 +4,12 @@ import { router } from 'expo-router';
 
 export default function TabOneScreen() {
   const [studentId, setStudentId] = useState("");
+  const [hasFetched, setHasFetched] = useState(false);
   const apiUrl = process.env.EXPO_PUBLIC_API_IP;
 
   const handleSubmit = async () => {
+    if (hasFetched) return; // prevent re-fetching
+
     Keyboard.dismiss();
 
     if (!studentId) {
@@ -21,18 +24,18 @@ export default function TabOneScreen() {
         body: JSON.stringify({ studentId }),
       });
 
-      if (!response.ok) {
-        throw new Error('Failed to fetch timetable');
-      }
+      if (!response.ok) throw new Error('Failed to fetch timetable');
 
       const data = await response.json();
       console.log("Fetched timetable:", data);
+
+      setHasFetched(true); // mark as fetched
 
       router.push({
         pathname: '/(tabs)/four',
         params: { timetable: JSON.stringify(data) },
       });
-      
+
     } catch (error) {
       console.error(error);
       Alert.alert("Error fetching timetable");
@@ -42,21 +45,37 @@ export default function TabOneScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <Text style={styles.header}>Welcome Back!</Text>
-      <Text style={styles.subHeader}>Please enter your student ID to continue</Text>
+      <Text style={styles.subHeader}>Enter your student ID to continue</Text>
       <View style={styles.accentLine} />
 
-      <TextInput
-        placeholder="Student ID"
-        value={studentId}
-        onChangeText={setStudentId}
-        placeholderTextColor="#808080"
-        style={styles.input}
-        keyboardType="number-pad"
-      />
+      <View style={styles.formCard}>
+        <TextInput
+          placeholder="Student ID"
+          value={studentId}
+          onChangeText={setStudentId}
+          placeholderTextColor="#9A9A9A"
+          style={styles.input}
+          keyboardType="number-pad"
+          editable={!hasFetched} // freeze input after success
+        />
 
-      <TouchableOpacity style={styles.button} onPress={handleSubmit}>
-        <Text style={styles.buttonText}>Submit</Text>
-      </TouchableOpacity>
+        <TouchableOpacity
+          style={[
+            styles.button,
+            hasFetched && styles.buttonDisabled
+          ]}
+          disabled={hasFetched}
+          onPress={handleSubmit}
+        >
+          <Text style={styles.buttonText}>
+            {hasFetched ? "Timetable Retrieved" : "Continue"}
+          </Text>
+        </TouchableOpacity>
+
+        {hasFetched && (
+          <Text style={styles.fetchedBadge}>✓ Timetable has been retrieved</Text>
+        )}
+      </View>
     </SafeAreaView>
   );
 }
@@ -67,54 +86,80 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFFFFF",
     alignItems: "center",
     justifyContent: "center",
-    padding: 20,
+    paddingHorizontal: 24,
   },
+
   header: {
-    fontSize: 32,
-    fontWeight: "bold",
+    fontSize: 34,
+    fontWeight: "800",
     color: "#4365E2",
-    marginBottom: 8,
+    marginBottom: 6,
   },
+
   subHeader: {
-    fontSize: 16,
-    color: "#808080",
-    marginBottom: 12,
+    fontSize: 15,
+    color: "#6F6F6F",
+    marginBottom: 10,
     textAlign: "center",
   },
+
   accentLine: {
-    width: 60,
-    height: 4,
+    width: 70,
+    height: 3,
     backgroundColor: "#4365E2",
-    borderRadius: 2,
-    marginBottom: 25,
+    borderRadius: 10,
+    marginBottom: 30,
+    opacity: 0.7,
   },
+
+  formCard: {
+    width: "100%",
+    padding: 20,
+    backgroundColor: "#F9F9F9",
+    borderRadius: 16,
+    shadowColor: "#000",
+    shadowOpacity: 0.06,
+    shadowOffset: { width: 0, height: 3 },
+    shadowRadius: 6,
+    elevation: 2,
+    alignItems: "center",
+  },
+
   input: {
     width: "100%",
-    height: 50,
-    backgroundColor: "#f5f5f5",
+    height: 52,
+    backgroundColor: "#FFFFFF",
     borderRadius: 12,
     paddingHorizontal: 15,
     marginBottom: 20,
     borderWidth: 1,
-    borderColor: "#4365E2",
+    borderColor: "#D0D7FF",
     color: "#000",
   },
+
   button: {
     width: "100%",
-    height: 50,
+    height: 52,
     backgroundColor: "#4365E2",
     borderRadius: 12,
     alignItems: "center",
     justifyContent: "center",
-    shadowColor: "#000",
-    shadowOpacity: 0.2,
-    shadowOffset: { width: 0, height: 2 },
-    shadowRadius: 4,
-    elevation: 3,
   },
+
+  buttonDisabled: {
+    backgroundColor: "#9BA6D1",
+  },
+
   buttonText: {
     color: "#FFFFFF",
     fontSize: 18,
-    fontWeight: "bold",
+    fontWeight: "600",
+  },
+
+  fetchedBadge: {
+    marginTop: 12,
+    color: "#2ECC71",
+    fontSize: 16,
+    fontWeight: "500",
   },
 });
