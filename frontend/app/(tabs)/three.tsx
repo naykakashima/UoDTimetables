@@ -1,6 +1,6 @@
-import { SafeAreaView, StyleSheet, View, Dimensions, Alert, Text } from 'react-native';
+import { SafeAreaView, StyleSheet, View, Dimensions, Alert, Text, TouchableOpacity, Animated } from 'react-native';
 import MapView, { Marker, Polyline } from 'react-native-maps';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import * as Location from 'expo-location';
 import { useTimetableStore } from '@/utils/timetableStore';
 
@@ -34,6 +34,10 @@ export default function MapScreen() {
   const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
   const [destination, setDestination] = useState<{ latitude: number; longitude: number } | null>(null);
   const [nextEvent, setNextEvent] = useState<any>(null);
+  const [isCardExpanded, setIsCardExpanded] = useState(true);
+  const [isNavigating, setIsNavigating] = useState(false);
+  const mapRef = useRef<MapView>(null);
+  const slideAnim = useRef(new Animated.Value(0)).current;
 
   // Get user location
   useEffect(() => {
@@ -51,37 +55,146 @@ export default function MapScreen() {
     })();
   }, []);
 
-  // Compute the next event for today
+  // Compute the next event for the next 24 hours
   useEffect(() => {
     const now = new Date();
-    const todayEvents = eventsWithLocation.filter((e) => {
+    const next24Hours = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+    
+    const upcomingEvents = eventsWithLocation.filter((e) => {
       const start = new Date(e.startTime);
-      return start >= now && start.toDateString() === now.toDateString();
+      return start >= now && start <= next24Hours;
     });
-    if (todayEvents.length > 0) {
-      todayEvents.sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime());
-      const event = todayEvents[0];
+    
+    if (upcomingEvents.length > 0) {
+      upcomingEvents.sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime());
+      const event = upcomingEvents[0];
       setNextEvent(event);
       const normalized = normalizeLocation(event.location);
       setDestination(campusLocations[normalized]);
+    } else {
+      setNextEvent(null);
+      setDestination(null);
+      setIsNavigating(false);
     }
   }, [timetable, eventsWithLocation]);
 
+  // Animate card slide
+  useEffect(() => {
+    Animated.timing(slideAnim, {
+      toValue: isCardExpanded ? 0 : 150,  // only slide down partially to keep toggle visible
+      duration: 300,
+      useNativeDriver: true,
+    }).start();
+  }, [isCardExpanded]);
+
+  // Update user location continuously when navigating
+  useEffect(() => {
+    let locationSubscription: Location.LocationSubscription | null = null;
+
+    if (isNavigating && destination) {
+      (async () => {
+        locationSubscription = await Location.watchPositionAsync(
+          {
+            accuracy: Location.Accuracy.High,
+            timeInterval: 2000,
+            distanceInterval: 5,
+          },
+          (location) => {
+            setUserLocation({
+              latitude: location.coords.latitude,
+              longitude: location.coords.longitude,
+            });
+          }
+        );
+      })();
+    }
+
+    return () => {
+      if (locationSubscription) {
+        locationSubscription.remove();
+      }
+    };
+  }, [isNavigating, destination]);
+
+  const handleGetDirections = () => {
+    if (!destination || !userLocation) {
+      Alert.alert('Unable to navigate', 'Location or destination not available.');
+      return;
+    }
+
+    setIsNavigating(true);
+    
+    // Fit map to show both user location and destination
+    if (mapRef.current) {
+      mapRef.current.fitToCoordinates([userLocation, destination], {
+        edgePadding: { top: 100, right: 50, bottom: 350, left: 50 },  // more bottom padding for bottom card
+        animated: true,
+      });
+    }
+  };
+
+  const handleStopNavigation = () => {
+    setIsNavigating(false);
+  };
+
   return (
     <SafeAreaView style={styles.container}>
-      {nextEvent && (
-        <View style={styles.nextEventCard}>
-          <Text style={styles.nextEventTitle}>Next Event:</Text>
-          <Text style={styles.eventName}>{nextEvent.title}</Text>
-          <Text style={styles.eventLocation}>{nextEvent.location}</Text>
-          <Text style={styles.eventTime}>
-            {new Date(nextEvent.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} -{' '}
-            {new Date(nextEvent.endTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-          </Text>
-        </View>
-      )}
+      <Animated.View 
+        style={[
+          styles.nextEventCard,
+          { transform: [{ translateY: slideAnim }] }
+        ]}
+      >
+        <TouchableOpacity 
+          onPress={() => setIsCardExpanded(!isCardExpanded)}
+          style={styles.cardHeader}
+          activeOpacity={0.7}
+        >
+          <View style={styles.toggleBar} />
+          <Text style={styles.toggleIndicator}>{isCardExpanded ? '▼' : '▲'}</Text>
+        </TouchableOpacity>
+
+        {isCardExpanded && (
+          <>
+            {nextEvent ? (
+              <>
+                <Text style={styles.nextEventTitle}>Next Class in 24hrs:</Text>
+                <Text style={styles.eventName}>{nextEvent.title}</Text>
+                <Text style={styles.eventLocation}>{nextEvent.location}</Text>
+                <Text style={styles.eventTime}>
+                  {new Date(nextEvent.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} -{' '}
+                  {new Date(nextEvent.endTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                </Text>
+                
+                {!isNavigating ? (
+                  <TouchableOpacity 
+                    style={styles.directionsButton}
+                    onPress={handleGetDirections}
+                  >
+                    <Text style={styles.directionsButtonText}>🧭 Get Directions</Text>
+                  </TouchableOpacity>
+                ) : (
+                  <TouchableOpacity 
+                    style={styles.stopButton}
+                    onPress={handleStopNavigation}
+                  >
+                    <Text style={styles.stopButtonText}>⏹ Stop Navigation</Text>
+                  </TouchableOpacity>
+                )}
+              </>
+            ) : (
+              <View style={styles.noClassContainer}>
+                <Text style={styles.noClassEmoji}>📅</Text>
+                <Text style={styles.noClassText}>No classes scheduled</Text>
+                <Text style={styles.noClassSubtext}>in the next 24 hours</Text>
+              </View>
+            )}
+          </>
+        )}
+      </Animated.View>
 
       <MapView
+        ref={mapRef}
         style={styles.map}
         initialRegion={{
           latitude: 56.4585,
@@ -106,11 +219,11 @@ export default function MapScreen() {
           );
         })}
 
-        {userLocation && destination && (
+        {userLocation && destination && isNavigating && (
           <Polyline
             coordinates={[userLocation, destination]}
             strokeColor="#4365E2"
-            strokeWidth={3}
+            strokeWidth={4}
           />
         )}
       </MapView>
@@ -123,7 +236,7 @@ const styles = StyleSheet.create({
   map: { width: Dimensions.get('window').width, height: Dimensions.get('window').height },
   nextEventCard: {
     position: 'absolute',
-    top: 20,
+    bottom: 100,  // positioned above the tab bar (85px height + 15px spacing)
     left: 20,
     right: 20,
     backgroundColor: '#FFFFFF',
@@ -131,12 +244,73 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     shadowColor: '#000',
     shadowOpacity: 0.1,
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: { width: 0, height: -2 },
     shadowRadius: 4,
     zIndex: 10,
+  },
+  cardHeader: {
+    alignItems: 'center',
+    marginBottom: 10,
+    paddingVertical: 5,
+  },
+  toggleBar: {
+    width: 40,
+    height: 4,
+    backgroundColor: '#D0D0D0',
+    borderRadius: 2,
+    marginBottom: 8,
+  },
+  toggleIndicator: {
+    fontSize: 14,
+    color: '#4365E2',
+    fontWeight: 'bold',
   },
   nextEventTitle: { fontSize: 14, color: '#808080', marginBottom: 4 },
   eventName: { fontSize: 16, fontWeight: 'bold', color: '#4365E2' },
   eventLocation: { fontSize: 14, color: '#333', marginTop: 2 },
   eventTime: { fontSize: 14, color: '#555', marginTop: 2 },
+  directionsButton: {
+    marginTop: 12,
+    backgroundColor: '#4365E2',
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  directionsButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  stopButton: {
+    marginTop: 12,
+    backgroundColor: '#E74C3C',
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  stopButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  noClassContainer: {
+    alignItems: 'center',
+    paddingVertical: 10,
+  },
+  noClassEmoji: {
+    fontSize: 40,
+    marginBottom: 8,
+  },
+  noClassText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#333',
+  },
+  noClassSubtext: {
+    fontSize: 14,
+    color: '#808080',
+    marginTop: 2,
+  },
 });
