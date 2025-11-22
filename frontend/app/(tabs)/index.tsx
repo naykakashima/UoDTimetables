@@ -1,6 +1,7 @@
 import { SafeAreaView, StyleSheet, TextInput, TouchableOpacity, Text, Keyboard, View, Alert } from "react-native";
 import { useState } from "react";
 import { router } from 'expo-router';
+import { useTimetableStore } from '@/utils/timetableStore';
 
 export default function TabOneScreen() {
   const [studentId, setStudentId] = useState("");
@@ -28,6 +29,9 @@ export default function TabOneScreen() {
 
       const data = await response.json();
       console.log("Fetched timetable:", data);
+
+      // Save to local store
+      useTimetableStore.getState().setTimetable(data);
 
       setHasFetched(true); // mark as fetched
 
