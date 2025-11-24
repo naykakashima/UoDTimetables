@@ -1,4 +1,4 @@
-import { SafeAreaView, StyleSheet, View, Dimensions, Alert, Text, TouchableOpacity, Animated } from 'react-native';
+import { SafeAreaView, StyleSheet, View, Dimensions, Alert, Text, TouchableOpacity, Animated, Linking, Platform } from 'react-native';
 import MapView, { Marker, Polyline } from 'react-native-maps';
 import { useState, useEffect, useRef } from 'react';
 import * as Location from 'expo-location';
@@ -81,7 +81,7 @@ export default function MapScreen() {
   // Animate card slide
   useEffect(() => {
     Animated.timing(slideAnim, {
-      toValue: isCardExpanded ? 0 : 150,  // only slide down partially to keep toggle visible
+      toValue: isCardExpanded ? 0 : 120,  // smaller slide distance for less empty space
       duration: 300,
       useNativeDriver: true,
     }).start();
@@ -137,6 +137,34 @@ export default function MapScreen() {
     setIsNavigating(false);
   };
 
+  const openInGoogleMaps = () => {
+    if (!destination || !userLocation) {
+      Alert.alert('Unable to open maps', 'Location or destination not available.');
+      return;
+    }
+
+    const scheme = Platform.select({
+      ios: 'maps://app?daddr=',
+      android: 'google.navigation:q='
+    });
+    
+    const url = Platform.select({
+      ios: `maps://app?daddr=${destination.latitude},${destination.longitude}&dirflg=w`,
+      android: `google.navigation:q=${destination.latitude},${destination.longitude}&mode=w`
+    });
+
+    const fallbackUrl = `https://www.google.com/maps/dir/?api=1&destination=${destination.latitude},${destination.longitude}&travelmode=walking`;
+
+    Linking.canOpenURL(url!).then((supported) => {
+      if (supported) {
+        Linking.openURL(url!);
+      } else {
+        // Fallback to browser if app not installed
+        Linking.openURL(fallbackUrl);
+      }
+    });
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <Animated.View 
@@ -167,19 +195,37 @@ export default function MapScreen() {
                 </Text>
                 
                 {!isNavigating ? (
-                  <TouchableOpacity 
-                    style={styles.directionsButton}
-                    onPress={handleGetDirections}
-                  >
-                    <Text style={styles.directionsButtonText}>🧭 Get Directions</Text>
-                  </TouchableOpacity>
+                  <>
+                    <TouchableOpacity 
+                      style={styles.directionsButton}
+                      onPress={handleGetDirections}
+                    >
+                      <Text style={styles.directionsButtonText}>🧭 Get Directions</Text>
+                    </TouchableOpacity>
+                    
+                    <TouchableOpacity 
+                      style={styles.googleMapsButton}
+                      onPress={openInGoogleMaps}
+                    >
+                      <Text style={styles.googleMapsButtonText}>📍 Open in Maps</Text>
+                    </TouchableOpacity>
+                  </>
                 ) : (
-                  <TouchableOpacity 
-                    style={styles.stopButton}
-                    onPress={handleStopNavigation}
-                  >
-                    <Text style={styles.stopButtonText}>⏹ Stop Navigation</Text>
-                  </TouchableOpacity>
+                  <>
+                    <TouchableOpacity 
+                      style={styles.stopButton}
+                      onPress={handleStopNavigation}
+                    >
+                      <Text style={styles.stopButtonText}>⏹ Stop Navigation</Text>
+                    </TouchableOpacity>
+                    
+                    <TouchableOpacity 
+                      style={styles.googleMapsButton}
+                      onPress={openInGoogleMaps}
+                    >
+                      <Text style={styles.googleMapsButtonText}>📍 Open in Google Maps</Text>
+                    </TouchableOpacity>
+                  </>
                 )}
               </>
             ) : (
@@ -261,7 +307,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   toggleIndicator: {
-    fontSize: 14,
+    fontSize: 18,
     color: '#4365E2',
     fontWeight: 'bold',
   },
@@ -291,6 +337,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   stopButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  googleMapsButton: {
+    marginTop: 8,
+    backgroundColor: '#34A853',
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  googleMapsButtonText: {
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '600',

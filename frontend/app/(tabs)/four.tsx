@@ -1,14 +1,16 @@
-import { SafeAreaView, Text, StyleSheet, View, Modal, TouchableOpacity, ScrollView } from "react-native";
+import { SafeAreaView, Text, StyleSheet, View, Modal, TouchableOpacity, ScrollView, Animated } from "react-native";
 import { useLocalSearchParams } from 'expo-router';
 import { Calendar } from "react-native-big-calendar";
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
+import { useTimetableStore } from '@/utils/timetableStore';
 
 export default function TabTwoScreen() {
   const { timetable } = useLocalSearchParams<{ timetable: string }>();
   const [selectedEvent, setSelectedEvent] = useState<any>(null);
   const [modalVisible, setModalVisible] = useState(false);
+  const storedTimetable = useTimetableStore((state) => state.timetable);
   
-  const parsedTimetable = timetable ? JSON.parse(timetable) : [];
+  const parsedTimetable = timetable ? JSON.parse(timetable) : storedTimetable;
   
   const events = parsedTimetable.map((event: any) => ({
     ...event,
@@ -16,6 +18,33 @@ export default function TabTwoScreen() {
     start: new Date(event.startTime),
     end: new Date(event.endTime),
   }));
+
+  // Toggle card state
+  const [upcomingEvents, setUpcomingEvents] = useState<any[]>([]);
+  const [isCardExpanded, setIsCardExpanded] = useState(true);
+  const slideAnim = useRef(new Animated.Value(0)).current;
+
+  // Find all events in the next 24 hours
+  useEffect(() => {
+    const now = new Date();
+    const next24Hours = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+    
+    const upcoming = events.filter((e: any) => {
+      return e.start >= now && e.start <= next24Hours;
+    });
+    
+    upcoming.sort((a: any, b: any) => a.start.getTime() - b.start.getTime());
+    setUpcomingEvents(upcoming);
+  }, [timetable, storedTimetable]);
+
+  // Animate card slide
+  useEffect(() => {
+    Animated.timing(slideAnim, {
+      toValue: isCardExpanded ? 0 : 120,
+      duration: 300,
+      useNativeDriver: true,
+    }).start();
+  }, [isCardExpanded]);
 
   const handleEventPress = (event: any) => {
     setSelectedEvent(event);
@@ -70,6 +99,55 @@ export default function TabTwoScreen() {
         eventCellStyle={{ backgroundColor: "#4365E2", borderRadius: 6 }}
       />
 
+      {/* Toggle upcoming events card */}
+      <Animated.View
+        style={[
+          styles.swipeCard,
+          { transform: [{ translateY: slideAnim }] }
+        ]}
+      >
+        <TouchableOpacity 
+          onPress={() => setIsCardExpanded(!isCardExpanded)}
+          style={styles.cardHeader}
+          activeOpacity={0.7}
+        >
+          <View style={styles.swipeHandle} />
+          <Text style={styles.toggleIndicator}>{isCardExpanded ? '▼' : '▲'}</Text>
+        </TouchableOpacity>
+        
+        {isCardExpanded && (
+          <ScrollView style={styles.cardScrollView} showsVerticalScrollIndicator={false}>
+            {upcomingEvents.length > 0 ? (
+              <>
+                <Text style={styles.cardLabel}>
+                  {upcomingEvents.length} {upcomingEvents.length === 1 ? 'Class' : 'Classes'} in Next 24hrs
+                </Text>
+                {upcomingEvents.map((event: any, index: number) => (
+                  <View key={`${event.moduleCode}-${index}`} style={styles.eventItem}>
+                    <Text style={styles.cardTitle}>{event.title.replace(` (${event.moduleCode})`, '')}</Text>
+                    <Text style={styles.cardLocation}>📍 {event.location}</Text>
+                    <Text style={styles.cardTime}>
+                      ⏰ {formatTime(event.start)} - {formatTime(event.end)}
+                    </Text>
+                    <Text style={styles.cardDate}>
+                      📅 {formatDate(event.start)}
+                    </Text>
+                    {index < upcomingEvents.length - 1 && <View style={styles.eventDivider} />}
+                  </View>
+                ))}
+              </>
+            ) : (
+              <View style={styles.cardContent}>
+                <Text style={styles.noEventEmoji}>📅</Text>
+                <Text style={styles.noEventText}>No classes scheduled</Text>
+                <Text style={styles.noEventSubtext}>in the next 24 hours</Text>
+              </View>
+            )}
+          </ScrollView>
+        )}
+      </Animated.View>
+
+      {/* Event detail modal */}
       <Modal
         animationType="slide"
         transparent={true}
@@ -207,6 +285,116 @@ const styles = StyleSheet.create({
     color: "#808080",
     marginTop: 8,
     textAlign: "center",
+  },
+
+  // Swipeable card styles
+  swipeCard: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    paddingTop: 12,
+    paddingBottom: 100,
+    paddingHorizontal: 20,
+    shadowColor: '#000',
+    shadowOpacity: 0.15,
+    shadowOffset: { width: 0, height: -4 },
+    shadowRadius: 12,
+    elevation: 10,
+    maxHeight: 400,
+  },
+
+  cardHeader: {
+    alignItems: 'center',
+    paddingVertical: 5,
+  },
+
+  swipeHandle: {
+    width: 40,
+    height: 5,
+    backgroundColor: '#D0D0D0',
+    borderRadius: 3,
+    alignSelf: 'center',
+    marginBottom: 8,
+  },
+
+  toggleIndicator: {
+    fontSize: 18,
+    color: '#4365E2',
+    fontWeight: 'bold',
+  },
+
+  cardScrollView: {
+    maxHeight: 250,
+  },
+
+  cardContent: {
+    paddingBottom: 10,
+  },
+
+  cardLabel: {
+    fontSize: 13,
+    color: '#808080',
+    fontWeight: '600',
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+
+  eventItem: {
+    marginBottom: 16,
+  },
+
+  cardTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#4365E2',
+    marginBottom: 6,
+  },
+
+  cardLocation: {
+    fontSize: 14,
+    color: '#333',
+    marginBottom: 3,
+  },
+
+  cardTime: {
+    fontSize: 14,
+    color: '#333',
+    marginBottom: 3,
+  },
+
+  cardDate: {
+    fontSize: 13,
+    color: '#808080',
+  },
+
+  eventDivider: {
+    height: 1,
+    backgroundColor: '#E0E0E0',
+    marginTop: 16,
+  },
+
+  noEventEmoji: {
+    fontSize: 48,
+    textAlign: 'center',
+    marginBottom: 12,
+  },
+
+  noEventText: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#333',
+    textAlign: 'center',
+  },
+
+  noEventSubtext: {
+    fontSize: 14,
+    color: '#808080',
+    textAlign: 'center',
+    marginTop: 4,
   },
 
   // Modal styles
