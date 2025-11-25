@@ -2,8 +2,6 @@
 
 UoDTimetables is a mobile application designed to simplify timetable management for University of Dundee students. It allows users to import their eVision timetables, view them in an interactive calendar, navigate campus buildings, and export schedules to external calendar apps.  
 
-GitHub: [https://github.com/naykakashima/UoDTimetables](https://github.com/naykakashima/UoDTimetables)
-
 ---
 
 ## Table of Contents
