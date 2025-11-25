@@ -1,4 +1,4 @@
-import { SafeAreaView, Text, StyleSheet, View, Modal, TouchableOpacity, ScrollView, Animated, Share, Alert, Linking } from "react-native";
+import { SafeAreaView, Text, StyleSheet, View, Modal, TouchableOpacity, ScrollView, Animated, Share, Alert, Linking, ActivityIndicator } from "react-native";
 import { useLocalSearchParams } from 'expo-router';
 import { Calendar } from "react-native-big-calendar";
 import { useState, useRef, useEffect } from "react";
@@ -11,6 +11,7 @@ export default function TabTwoScreen() {
   const { timetable } = useLocalSearchParams<{ timetable: string }>();
   const [selectedEvent, setSelectedEvent] = useState<any>(null);
   const [modalVisible, setModalVisible] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
   const storedTimetable = useTimetableStore((state) => state.timetable);
   
   const parsedTimetable = timetable ? JSON.parse(timetable) : storedTimetable;
@@ -72,6 +73,8 @@ export default function TabTwoScreen() {
   };
 
   const exportToICS = async () => {
+    setIsExporting(true);
+    
     try {
       // Generate ICS content
       let icsContent = 'BEGIN:VCALENDAR\n';
@@ -128,6 +131,8 @@ export default function TabTwoScreen() {
     } catch (error) {
       console.error('Export error:', error);
       Alert.alert('Export Failed', 'Unable to export timetable. Please try again.');
+    } finally {
+      setIsExporting(false);
     }
   };
 
@@ -152,11 +157,16 @@ export default function TabTwoScreen() {
             <Text style={styles.eventCount}>{events.length} events</Text>
           </View>
           <TouchableOpacity 
-            style={styles.exportButton}
+            style={[styles.exportButton, isExporting && styles.exportButtonDisabled]}
             onPress={exportToICS}
             activeOpacity={0.7}
+            disabled={isExporting}
           >
-            <Text style={styles.exportIcon}>⬆️</Text>
+            {isExporting ? (
+              <ActivityIndicator size="small" color="#FFFFFF" />
+            ) : (
+              <Text style={styles.exportIcon}>⬆️</Text>
+            )}
           </TouchableOpacity>
         </View>
       </View>
@@ -346,6 +356,11 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowRadius: 4,
     elevation: 4,
+  },
+
+  exportButtonDisabled: {
+    backgroundColor: "#9BA6D1",
+    shadowOpacity: 0.15,
   },
 
   exportIcon: {

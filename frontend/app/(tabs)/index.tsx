@@ -1,4 +1,4 @@
-import { SafeAreaView, StyleSheet, TextInput, TouchableOpacity, Text, Keyboard, View, Alert } from "react-native";
+import { SafeAreaView, StyleSheet, TextInput, TouchableOpacity, Text, Keyboard, View, Alert, Modal, ActivityIndicator } from "react-native";
 import { useState } from "react";
 import { router } from 'expo-router';
 import { useTimetableStore } from '@/utils/timetableStore';
@@ -6,10 +6,11 @@ import { useTimetableStore } from '@/utils/timetableStore';
 export default function TabOneScreen() {
   const [studentId, setStudentId] = useState("");
   const [hasFetched, setHasFetched] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const apiUrl = process.env.EXPO_PUBLIC_API_IP;
 
   const handleSubmit = async () => {
-    if (hasFetched) return; // prevent re-fetching
+    if (hasFetched) return;
 
     Keyboard.dismiss();
 
@@ -17,6 +18,8 @@ export default function TabOneScreen() {
       Alert.alert("Please enter a student ID");
       return;
     }
+
+    setIsLoading(true);
 
     try {
       const response = await fetch(`http://${apiUrl}:8080/api/timetable/import`, {
@@ -30,10 +33,8 @@ export default function TabOneScreen() {
       const data = await response.json();
       console.log("Fetched timetable:", data);
 
-      // Save to local store
       useTimetableStore.getState().setTimetable(data);
-
-      setHasFetched(true); // mark as fetched
+      setHasFetched(true);
 
       router.push({
         pathname: '/(tabs)/four',
@@ -43,6 +44,8 @@ export default function TabOneScreen() {
     } catch (error) {
       console.error(error);
       Alert.alert("Error fetching timetable");
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -60,15 +63,15 @@ export default function TabOneScreen() {
           placeholderTextColor="#9A9A9A"
           style={styles.input}
           keyboardType="number-pad"
-          editable={!hasFetched} // freeze input after success
+          editable={!hasFetched && !isLoading}
         />
 
         <TouchableOpacity
           style={[
             styles.button,
-            hasFetched && styles.buttonDisabled
+            (hasFetched || isLoading) && styles.buttonDisabled
           ]}
-          disabled={hasFetched}
+          disabled={hasFetched || isLoading}
           onPress={handleSubmit}
         >
           <Text style={styles.buttonText}>
@@ -80,6 +83,21 @@ export default function TabOneScreen() {
           <Text style={styles.fetchedBadge}>✓ Timetable has been retrieved</Text>
         )}
       </View>
+
+      {/* Loading Modal */}
+      <Modal
+        transparent={true}
+        animationType="fade"
+        visible={isLoading}
+        onRequestClose={() => {}}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <ActivityIndicator size="large" color="#4365E2" />
+            <Text style={styles.loadingText}>Fetching your timetable...</Text>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -164,6 +182,33 @@ const styles = StyleSheet.create({
     marginTop: 12,
     color: "#2ECC71",
     fontSize: 16,
+    fontWeight: "500",
+  },
+
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+
+  modalContent: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 16,
+    padding: 32,
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOpacity: 0.25,
+    shadowOffset: { width: 0, height: 4 },
+    shadowRadius: 10,
+    elevation: 5,
+    minWidth: 200,
+  },
+
+  loadingText: {
+    marginTop: 16,
+    fontSize: 16,
+    color: "#4365E2",
     fontWeight: "500",
   },
 });
