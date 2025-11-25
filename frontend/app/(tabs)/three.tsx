@@ -15,20 +15,47 @@ const campusLocations: { [key: string]: { latitude: number; longitude: number } 
   "Queen Mother Wolfson LT (HCS)": { latitude: 56.458584746610526, longitude: -2.982639746349652 },
 };
 
-// Helper function to normalize location strings
-// Removes capacity info like "[cap.161]" from location strings
+// Helper function to normalize a single location string
 const normalizeLocation = (location: string): string => {
-  return location.replace(/\s*\[cap\.\d+\]\s*$/, '').trim();
+  // Remove capacity info like "[cap.60]"
+  let normalized = location.replace(/\s*\[cap\.\d+\]\s*$/, '');
+  // Remove trailing (HTS) that appears AFTER the main identifier like (R/HTS), (SSEN ITS), (HCS)
+  // But keep the main identifiers themselves
+  normalized = normalized.replace(/\s*\(HTS\)\s*$/, '');
+  return normalized.trim();
+};
+
+// Function to find the first valid location from a potentially comma-separated string
+const findFirstValidLocation = (locationString: string): { latitude: number; longitude: number } | null => {
+  // Split by comma in case there are multiple locations
+  const locations = locationString.split(',').map(loc => loc.trim());
+  
+  // Try each location until we find a match
+  for (const loc of locations) {
+    const normalized = normalizeLocation(loc);
+    if (campusLocations[normalized]) {
+      return campusLocations[normalized];
+    }
+  }
+  
+  return null;
 };
 
 export default function MapScreen() {
   const timetable = useTimetableStore((state) => state.timetable);
+  const [hasTimetable, setHasTimetable] = useState(false);
+
+  // Check if timetable has been fetched
+  useEffect(() => {
+    if (timetable && timetable.length > 0) {
+      setHasTimetable(true);
+    }
+  }, [timetable]);
 
   // Filter events that have a known location
   const eventsWithLocation = timetable.filter((e) => {
     if (!e.location) return false;
-    const normalized = normalizeLocation(e.location);
-    return campusLocations[normalized] !== undefined;
+    return findFirstValidLocation(e.location) !== null;
   });
 
   const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
@@ -38,6 +65,22 @@ export default function MapScreen() {
   const [isNavigating, setIsNavigating] = useState(false);
   const mapRef = useRef<MapView>(null);
   const slideAnim = useRef(new Animated.Value(0)).current;
+
+  // DEMO PINS - Always show these two locations after timetable is fetched
+  const demoPins = [
+    {
+      id: 'demo-carnelley',
+      title: 'Carnelley Small LT (HTS)',
+      description: 'Lecture Theater',
+      coordinates: campusLocations['Carnelley Small LT (HTS)']
+    },
+    {
+      id: 'demo-fulton', 
+      title: 'Fulton F20 (HTS)',
+      description: 'Classroom',
+      coordinates: campusLocations['Fulton F20 (HTS)']
+    }
+  ];
 
   // Get user location
   useEffect(() => {
@@ -60,28 +103,35 @@ export default function MapScreen() {
     const now = new Date();
     const next24Hours = new Date(now.getTime() + 24 * 60 * 60 * 1000);
     
-    const upcomingEvents = eventsWithLocation.filter((e) => {
-      const start = new Date(e.startTime);
-      return start >= now && start <= next24Hours;
-    });
+    const upcomingEvents = eventsWithLocation
+      .map(e => ({
+        ...e,
+        startTime: new Date(e.startTime),
+        endTime: new Date(e.endTime)
+      }))
+      .filter((e) => {
+        return e.startTime >= now && e.startTime <= next24Hours;
+      })
+      .sort((a, b) => a.startTime.getTime() - b.startTime.getTime());
     
     if (upcomingEvents.length > 0) {
-      upcomingEvents.sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime());
       const event = upcomingEvents[0];
       setNextEvent(event);
-      const normalized = normalizeLocation(event.location);
-      setDestination(campusLocations[normalized]);
+      const coords = findFirstValidLocation(event.location);
+      if (coords) {
+        setDestination(coords);
+      }
     } else {
       setNextEvent(null);
       setDestination(null);
       setIsNavigating(false);
     }
-  }, [timetable, eventsWithLocation]);
+  }, [timetable]);
 
   // Animate card slide
   useEffect(() => {
     Animated.timing(slideAnim, {
-      toValue: isCardExpanded ? 0 : 120,  // smaller slide distance for less empty space
+      toValue: isCardExpanded ? 0 : 120,
       duration: 300,
       useNativeDriver: true,
     }).start();
@@ -127,7 +177,7 @@ export default function MapScreen() {
     // Fit map to show both user location and destination
     if (mapRef.current) {
       mapRef.current.fitToCoordinates([userLocation, destination], {
-        edgePadding: { top: 100, right: 50, bottom: 350, left: 50 },  // more bottom padding for bottom card
+        edgePadding: { top: 100, right: 50, bottom: 350, left: 50 },
         animated: true,
       });
     }
@@ -143,11 +193,6 @@ export default function MapScreen() {
       return;
     }
 
-    const scheme = Platform.select({
-      ios: 'maps://app?daddr=',
-      android: 'google.navigation:q='
-    });
-    
     const url = Platform.select({
       ios: `maps://app?daddr=${destination.latitude},${destination.longitude}&dirflg=w`,
       android: `google.navigation:q=${destination.latitude},${destination.longitude}&mode=w`
@@ -159,9 +204,16 @@ export default function MapScreen() {
       if (supported) {
         Linking.openURL(url!);
       } else {
-        // Fallback to browser if app not installed
         Linking.openURL(fallbackUrl);
       }
+    });
+  };
+
+  const formatTime = (date: Date) => {
+    return date.toLocaleTimeString('en-GB', { 
+      hour: '2-digit', 
+      minute: '2-digit',
+      hour12: false 
     });
   };
 
@@ -190,8 +242,7 @@ export default function MapScreen() {
                 <Text style={styles.eventName}>{nextEvent.title}</Text>
                 <Text style={styles.eventLocation}>{nextEvent.location}</Text>
                 <Text style={styles.eventTime}>
-                  {new Date(nextEvent.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} -{' '}
-                  {new Date(nextEvent.endTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  {formatTime(nextEvent.startTime)} - {formatTime(nextEvent.endTime)}
                 </Text>
                 
                 {!isNavigating ? (
@@ -250,17 +301,28 @@ export default function MapScreen() {
         }}
         showsUserLocation={true}
       >
+        {/* Show demo pins ONLY after timetable has been fetched */}
+        {hasTimetable && demoPins.map((pin) => (
+          <Marker
+            key={pin.id}
+            coordinate={pin.coordinates}
+            title={pin.title}
+            description={pin.description}
+            onPress={() => setDestination(pin.coordinates)}
+          />
+        ))}
+
+        {/* Show actual timetable events */}
         {eventsWithLocation.map((event, index) => {
-          const normalized = normalizeLocation(event.location);
-          const loc = campusLocations[normalized];
-          if (!loc) return null;
+          const coords = findFirstValidLocation(event.location);
+          if (!coords) return null;
           return (
             <Marker
               key={`${event.moduleCode}-${event.title}-${index}`}
-              coordinate={loc}
+              coordinate={coords}
               title={event.title}
               description={event.location}
-              onPress={() => setDestination(loc)}
+              onPress={() => setDestination(coords)}
             />
           );
         })}
@@ -282,7 +344,7 @@ const styles = StyleSheet.create({
   map: { width: Dimensions.get('window').width, height: Dimensions.get('window').height },
   nextEventCard: {
     position: 'absolute',
-    bottom: 100,  // positioned above the tab bar (85px height + 15px spacing)
+    bottom: 100,
     left: 20,
     right: 20,
     backgroundColor: '#FFFFFF',

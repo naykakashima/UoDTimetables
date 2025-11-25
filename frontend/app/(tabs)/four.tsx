@@ -1,4 +1,4 @@
-import { SafeAreaView, Text, StyleSheet, View, Modal, TouchableOpacity, ScrollView, Animated, Share, Alert } from "react-native";
+import { SafeAreaView, Text, StyleSheet, View, Modal, TouchableOpacity, ScrollView, Animated, Share, Alert, Linking } from "react-native";
 import { useLocalSearchParams } from 'expo-router';
 import { Calendar } from "react-native-big-calendar";
 import { useState, useRef, useEffect } from "react";
@@ -72,62 +72,64 @@ export default function TabTwoScreen() {
   };
 
   const exportToICS = async () => {
-  try {
-    // Generate ICS content
-    let icsContent = 'BEGIN:VCALENDAR\n';
-    icsContent += 'VERSION:2.0\n';
-    icsContent += 'PRODID:-//UoDTimetables//EN\n';
-    icsContent += 'CALSCALE:GREGORIAN\n';
-    icsContent += 'METHOD:PUBLISH\n';
-    icsContent += 'X-WR-CALNAME:University of Dundee Timetable\n';
-    icsContent += 'X-WR-TIMEZONE:Europe/London\n';
+    try {
+      // Generate ICS content
+      let icsContent = 'BEGIN:VCALENDAR\n';
+      icsContent += 'VERSION:2.0\n';
+      icsContent += 'PRODID:-//UoDTimetables//EN\n';
+      icsContent += 'CALSCALE:GREGORIAN\n';
+      icsContent += 'METHOD:PUBLISH\n';
+      icsContent += 'X-WR-CALNAME:University of Dundee Timetable\n';
+      icsContent += 'X-WR-TIMEZONE:Europe/London\n';
 
-    events.forEach((event: any) => {
-      const formatICSDate = (date: Date) => {
-        return date.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
-      };
+      events.forEach((event: any) => {
+        const formatICSDate = (date: Date) => {
+          return date.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+        };
 
-      icsContent += 'BEGIN:VEVENT\n';
-      icsContent += `UID:${event.moduleCode}-${event.start.getTime()}@uodtimetables.com\n`;
-      icsContent += `DTSTAMP:${formatICSDate(new Date())}\n`;
-      icsContent += `DTSTART:${formatICSDate(event.start)}\n`;
-      icsContent += `DTEND:${formatICSDate(event.end)}\n`;
-      icsContent += `SUMMARY:${event.title}\n`;
-      icsContent += `LOCATION:${event.location}\n`;
-      icsContent += `DESCRIPTION:${event.description}\\nWeek ${event.weekNumber}\n`;
-      icsContent += 'STATUS:CONFIRMED\n';
-      icsContent += 'SEQUENCE:0\n';
-      icsContent += 'END:VEVENT\n';
-    });
-
-    icsContent += 'END:VCALENDAR';
-
-    // Create a proper file path in the cache directory
-    const fileName = 'uod_timetable.ics';
-    const fileUri = `${FileSystem.cacheDirectory}${fileName}`;
-    
-    // Write the file
-    await FileSystem.writeAsStringAsync(fileUri, icsContent, {
-      encoding: FileSystem.EncodingType.UTF8,
-    });
-
-    // Check if sharing is available
-    const isAvailable = await Sharing.isAvailableAsync();
-    
-    if (isAvailable) {
-      await Sharing.shareAsync(fileUri, {
-        mimeType: 'text/calendar',
-        dialogTitle: 'Export Timetable',
-        UTI: 'public.calendar-event', // iOS uniform type identifier
+        icsContent += 'BEGIN:VEVENT\n';
+        icsContent += `UID:${event.moduleCode}-${event.start.getTime()}@uodtimetables.com\n`;
+        icsContent += `DTSTAMP:${formatICSDate(new Date())}\n`;
+        icsContent += `DTSTART:${formatICSDate(event.start)}\n`;
+        icsContent += `DTEND:${formatICSDate(event.end)}\n`;
+        icsContent += `SUMMARY:${event.title}\n`;
+        icsContent += `LOCATION:${event.location}\n`;
+        icsContent += `DESCRIPTION:${event.description}\\nWeek ${event.weekNumber}\n`;
+        icsContent += 'STATUS:CONFIRMED\n';
+        icsContent += 'SEQUENCE:0\n';
+        icsContent += 'END:VEVENT\n';
       });
-    } else {
-      Alert.alert('Export Successful', 'Timetable saved to device');
+
+      icsContent += 'END:VCALENDAR';
+
+      // Create data URL for direct calendar import
+      const dataUrl = `data:text/calendar;charset=utf-8,${encodeURIComponent(icsContent)}`;
+      
+      // Try to open directly in Calendar app
+      const canOpen = await Linking.canOpenURL(dataUrl);
+      
+      if (canOpen) {
+        await Linking.openURL(dataUrl);
+      } else {
+        // Fallback to sharing if data URL doesn't work
+        const fileName = 'uod_timetable.ics';
+        const fileUri = `${FileSystem.cacheDirectory}${fileName}`;
+        
+        await FileSystem.writeAsStringAsync(fileUri, icsContent, {
+          encoding: FileSystem.EncodingType.UTF8,
+        });
+
+        await Sharing.shareAsync(fileUri, {
+          mimeType: 'text/calendar',
+          dialogTitle: 'Add to Calendar',
+          UTI: 'public.calendar-event',
+        });
+      }
+    } catch (error) {
+      console.error('Export error:', error);
+      Alert.alert('Export Failed', 'Unable to export timetable. Please try again.');
     }
-  } catch (error) {
-    console.error('Export error:', error);
-    Alert.alert('Export Failed', 'Unable to export timetable. Please try again.');
-  }
-};
+  };
 
   if (events.length === 0) {
     return (
