@@ -223,7 +223,7 @@ export default function MapScreen() {
                       style={styles.googleMapsButton}
                       onPress={openInGoogleMaps}
                     >
-                      <Text style={styles.googleMapsButtonText}>📍 Open in Google Maps</Text>
+                      <Text style={styles.googleMapsButtonText}>📍 Open in Maps</Text>
                     </TouchableOpacity>
                   </>
                 )}

@@ -1,8 +1,11 @@
-import { SafeAreaView, Text, StyleSheet, View, Modal, TouchableOpacity, ScrollView, Animated } from "react-native";
+import { SafeAreaView, Text, StyleSheet, View, Modal, TouchableOpacity, ScrollView, Animated, Share, Alert } from "react-native";
 import { useLocalSearchParams } from 'expo-router';
 import { Calendar } from "react-native-big-calendar";
 import { useState, useRef, useEffect } from "react";
 import { useTimetableStore } from '@/utils/timetableStore';
+import * as FileSystem from 'expo-file-system/legacy';
+import { File, Paths } from 'expo-file-system';
+import * as Sharing from 'expo-sharing';
 
 export default function TabTwoScreen() {
   const { timetable } = useLocalSearchParams<{ timetable: string }>();
@@ -68,6 +71,64 @@ export default function TabTwoScreen() {
     });
   };
 
+  const exportToICS = async () => {
+  try {
+    // Generate ICS content
+    let icsContent = 'BEGIN:VCALENDAR\n';
+    icsContent += 'VERSION:2.0\n';
+    icsContent += 'PRODID:-//UoDTimetables//EN\n';
+    icsContent += 'CALSCALE:GREGORIAN\n';
+    icsContent += 'METHOD:PUBLISH\n';
+    icsContent += 'X-WR-CALNAME:University of Dundee Timetable\n';
+    icsContent += 'X-WR-TIMEZONE:Europe/London\n';
+
+    events.forEach((event: any) => {
+      const formatICSDate = (date: Date) => {
+        return date.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+      };
+
+      icsContent += 'BEGIN:VEVENT\n';
+      icsContent += `UID:${event.moduleCode}-${event.start.getTime()}@uodtimetables.com\n`;
+      icsContent += `DTSTAMP:${formatICSDate(new Date())}\n`;
+      icsContent += `DTSTART:${formatICSDate(event.start)}\n`;
+      icsContent += `DTEND:${formatICSDate(event.end)}\n`;
+      icsContent += `SUMMARY:${event.title}\n`;
+      icsContent += `LOCATION:${event.location}\n`;
+      icsContent += `DESCRIPTION:${event.description}\\nWeek ${event.weekNumber}\n`;
+      icsContent += 'STATUS:CONFIRMED\n';
+      icsContent += 'SEQUENCE:0\n';
+      icsContent += 'END:VEVENT\n';
+    });
+
+    icsContent += 'END:VCALENDAR';
+
+    // Create a proper file path in the cache directory
+    const fileName = 'uod_timetable.ics';
+    const fileUri = `${FileSystem.cacheDirectory}${fileName}`;
+    
+    // Write the file
+    await FileSystem.writeAsStringAsync(fileUri, icsContent, {
+      encoding: FileSystem.EncodingType.UTF8,
+    });
+
+    // Check if sharing is available
+    const isAvailable = await Sharing.isAvailableAsync();
+    
+    if (isAvailable) {
+      await Sharing.shareAsync(fileUri, {
+        mimeType: 'text/calendar',
+        dialogTitle: 'Export Timetable',
+        UTI: 'public.calendar-event', // iOS uniform type identifier
+      });
+    } else {
+      Alert.alert('Export Successful', 'Timetable saved to device');
+    }
+  } catch (error) {
+    console.error('Export error:', error);
+    Alert.alert('Export Failed', 'Unable to export timetable. Please try again.');
+  }
+};
+
   if (events.length === 0) {
     return (
       <SafeAreaView style={styles.emptyContainer}>
@@ -82,9 +143,20 @@ export default function TabTwoScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.headerText}>Your Timetable</Text>
-        <View style={styles.accentLine} />
-        <Text style={styles.eventCount}>{events.length} events</Text>
+        <View style={styles.headerContent}>
+          <View>
+            <Text style={styles.headerText}>Your Timetable</Text>
+            <View style={styles.accentLine} />
+            <Text style={styles.eventCount}>{events.length} events</Text>
+          </View>
+          <TouchableOpacity 
+            style={styles.exportButton}
+            onPress={exportToICS}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.exportIcon}>⬆️</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       <Calendar
@@ -233,6 +305,12 @@ const styles = StyleSheet.create({
     borderBottomColor: "#E0E0E0",
   },
 
+  headerContent: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+
   headerText: {
     fontSize: 28,
     fontWeight: "bold",
@@ -252,6 +330,24 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#4365E2",
     fontWeight: "500",
+  },
+
+  exportButton: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: "#4365E2",
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#4365E2',
+    shadowOpacity: 0.3,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 4,
+    elevation: 4,
+  },
+
+  exportIcon: {
+    fontSize: 24,
   },
 
   emptyContainer: {
