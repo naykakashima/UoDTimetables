@@ -71,3 +71,31 @@ GitHub: [https://github.com/naykakashima/UoDTimetables](https://github.com/nayka
     ./mvnw spring-boot:run
     ```
 5. The backend will start on http://localhost:8080.
+
+### Frontend
+1. Navigate to the frontend directory:
+    ```
+    cd ../frontend
+    ```
+2. Copy .env.example to .env and add your backend IP:
+    ```
+    EXPO_PUBLIC_API_IP=http://<your-laptop-ip>:8080
+    ```
+3. Install dependencies:
+    ```
+    npm install
+    ```
+4. Run the Expo app:
+    ```
+    npx expo start
+    ```
+5. Scan the QR code with your mobile device (Expo Go) to test the app.
+
+## Environment Variables
+- EXPO_PUBLIC_API_IP: The IP address of your machine running the backend server. Must be accessible on your device network.
+
+## Usage
+1. Start the backend server.
+2. Start the frontend Expo app.
+3. Import your eVision timetable link into the app.
+4. View your timetable, navigate campus, and export to Google/Apple Calendar.
