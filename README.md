@@ -103,18 +103,15 @@ UoDTimetables is a mobile application designed to simplify timetable management 
     │ ├── fonts
     │ └── images
     ├── components
-    │ ├── CalendarView.js
-    │ ├── MapView.js
-    │ └── TimetableItem.js
-    ├── screens
-    │ ├── LoginScreen.js
-    │ ├── CalendarScreen.js
-    │ └── MapScreen.js
-    ├── navigation
-    │ └── AppNavigator.js
+    ├── config
+    ├── constants
+    ├── theme
+    ├── utils
     ├── .env
     ├── package.json
+    ├── tsconfig.json
     └── app.json
+
     ```
 - Backend
     ```
