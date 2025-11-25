@@ -1,3 +1,73 @@
 # UoDTimetables
 
-Initialising project
+UoDTimetables is a mobile application designed to simplify timetable management for University of Dundee students. It allows users to import their eVision timetables, view them in an interactive calendar, navigate campus buildings, and export schedules to external calendar apps.  
+
+GitHub: [https://github.com/naykakashima/UoDTimetables](https://github.com/naykakashima/UoDTimetables)
+
+---
+
+## Table of Contents
+- [Features](#features)
+- [Tech Stack](#tech-stack)
+- [Setup Instructions](#setup-instructions)
+  - [Backend](#backend)
+  - [Frontend](#frontend)
+- [Environment Variables](#environment-variables)
+- [Usage](#usage)
+- [References & AI Usage](#references--ai-usage)
+
+---
+
+## Features
+- Import timetable from eVision (HTML scrape → ICS conversion)
+- Interactive calendar display (weekly/daily views)
+- Campus map navigation (GPS integration)
+- Export to Google/Apple Calendar
+- Secure authentication with Firebase
+
+---
+
+## Tech Stack
+**Backend:**  
+- Java 17, Spring Boot  
+- PostgreSQL  
+- Firebase Authentication  
+
+**Frontend:**  
+- React Native (Expo)  
+
+**Other Tools:**  
+- Postman (API testing)  
+- PgAdmin 4 (DB management)  
+- UoD digital design system for UI consistency  
+
+---
+
+## Setup Instructions
+
+### Backend
+1. Clone the repository:  
+   ```
+   git clone https://github.com/naykakashima/UoDTimetables.git
+   cd UoDTimetables/backend
+   ```
+2. Copy the example configuration file and fill in your PostgreSQL credentials:
+    ```
+    cp src/main/resources/application.yml.example src/main/resources/application.yml
+    ```
+    - Update (refer to application.yml.example)
+        ```
+        spring:
+        datasource:
+            url: jdbc:postgresql://localhost:5432/your_db_name
+            username: your_username
+            password: your_password
+        ```
+3. Make sure you have Java 17 installed and Maven (wrapper included with the project).
+    - Maven wrapper version: 3.3.4
+4. Build and run the backend:
+    ```
+    ./mvnw clean install
+    ./mvnw spring-boot:run
+    ```
+5. The backend will start on http://localhost:8080.
