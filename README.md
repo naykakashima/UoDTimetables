@@ -98,7 +98,7 @@ UoDTimetables is a mobile application designed to simplify timetable management 
 - Frontend
     ```
     frontend
-    ├── App.js
+    ├── App
     ├── assets
     │ ├── fonts
     │ └── images
