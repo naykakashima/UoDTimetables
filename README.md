@@ -91,6 +91,47 @@ UoDTimetables is a mobile application designed to simplify timetable management 
 ## Environment Variables
 - EXPO_PUBLIC_API_IP: The IP address of your machine running the backend server. Must be accessible on your device network.
 
+---
+
+## Project Structure
+
+- Frontend
+    ```
+    frontend
+    ├── App.js
+    ├── assets
+    │ ├── fonts
+    │ └── images
+    ├── components
+    │ ├── CalendarView.js
+    │ ├── MapView.js
+    │ └── TimetableItem.js
+    ├── screens
+    │ ├── LoginScreen.js
+    │ ├── CalendarScreen.js
+    │ └── MapScreen.js
+    ├── navigation
+    │ └── AppNavigator.js
+    ├── .env
+    ├── package.json
+    └── app.json
+    ```
+- Backend
+    ```
+    backend/src/main/java/com/naykakashima/backend
+    ├── application
+    │ └── implementations
+    ├── config
+    │ └── SecurityConfig
+    │ └── java
+    ├── domain
+    ├── infrastructure
+    │ └── repository
+    └── presentation
+    ```
+
+---
+
 ## Usage
 1. Start the backend server.
 2. Start the frontend Expo app.
