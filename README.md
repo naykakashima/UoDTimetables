@@ -14,7 +14,6 @@ GitHub: [https://github.com/naykakashima/UoDTimetables](https://github.com/nayka
   - [Frontend](#frontend)
 - [Environment Variables](#environment-variables)
 - [Usage](#usage)
-- [References & AI Usage](#references--ai-usage)
 
 ---
 
